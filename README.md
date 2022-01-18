@@ -14,15 +14,15 @@
 
 
 
-⚡强烈建议⚡下载下来阅读，可以看到颜色更丰富的字体
+
 
 # A-series-of-CV
 <span style="color:red">**温馨提示**</span>
-- 尽量以结构化思维来阅读，即尤其注意每一部分的开头和结尾小结，这将有助于你了解每一小段的主旨大意，使得你可以选择是否现在需要学习它以及要打算要学习到哪种程度。
+- ⚡强烈建议⚡下载下来阅读，可以看到颜色更丰富的字体
+- 尽量以结构化思维来阅读，即尤其注意每一部分的开头和结尾小结，这将有助于你了解每一小段的主旨大意，使得你可以选择是否现在需要学习它以及要打算要学习到哪种程度。越缩进的越是细节,看不懂可暂时不看,更多用来作为补充
 - 一般地，ref都是我看过的，良心推荐，所以如果需要额外补充和更加详细的讲解，可以阅读ref。如果想跟我们在 reference 阅读上进行更多互动，或者更快速地把握阅读重点，推荐使用Hypothesis Google插件并且通过以下链接进入便可以看到这篇文章内我阅读时认为的重点和有意思的批注。论文不一定完全看完，但是一些插图和对符号的描述很有助于理解
     - https://hypothes.is/groups/DymmQBML/shouxieai
     - 通过该插件看到的颜色，你应该可以更好更快地阅读和理解
-- 建议下载下来看markdown，可以看到一些字有彩色标注
 <br>
 <br>
 
@@ -56,6 +56,7 @@ reference:<br>
     - 观看建议：只需观看原理即可，代码可忽略
 - [2] https://www.pyimagesearch.com/2020/06/22/turning-any-cnn-image-classifier-into-an-object-detector-with-keras-tensorflow-and-opencv/
     - 本篇文章的思想其实就是MTCNN的思想,对sliding window框到的图片，都拿去做图像分类任务
+        - MTCNN implementation 仅推理 https://github.com/shouxieai/MTCNN
 - [3] 手写yolov1https://www.bilibili.com/video/BV1xr4y1y7DD?share_source=copy_web
     - 了解最开始的yolo的思想和手写实现yolo
 - [4] yolov1 paper https://arxiv.org/pdf/1506.02640.pdf
