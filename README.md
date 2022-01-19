@@ -4,7 +4,12 @@
 	* 2.1. [分类 --> 回归 --> 检测](#----)
 		* 2.1.1. [1.0版本（单目标检测）](#-1)
 		* 2.1.2. [2.0版本（多目标检测，简单升级版）](#-1)
-		* 2.1.3. [3.0 版本（多目标检测，全卷积高级版本）](#-1)
+		* 2.1.3. [3.0版本（多目标检测，全卷积高级版本）](#-1)
+* 3. [手写yolov1](#yolov1)
+	* 3.1. [train.py](#train.py)
+	* 3.2. [算法原理概览：(idea behind algorithm)](#ideabehindalgorithm)
+	* 3.3. [模型结构：（model architecture）](#modelarchitecture)
+	* 3.4. [损失函数: (loss function)](#:lossfunction)
 
 <!-- vscode-markdown-toc-config
 	numbering=true
@@ -126,13 +131,13 @@ reference:<br>
 
 <br><br>
 
-## 手写yolov1
+##  3. <a name='yolov1'></a>手写yolov1
 reference:
 - [1] source code https://github.com/aladdinpersson/Machine-Learning-Collection/tree/master/ML/Pytorch/object_detection/YOLO
 - [2] yolov1 from scratch https://www.youtube.com/watch?v=n9_XyCGr-MI&t=4532s
 
 
-### train.py
+###  3.1. <a name='train.py'></a>train.py
 
 概览工程目录
 <div align = center>
@@ -261,7 +266,12 @@ def main():
             - 等其他的新特点
                 - 注意：讨论代码细节的时候代码和形象结合将更有注意理解
 
-### 算法原理概览：(idea behind algorithm)
+###  3.2. <a name='ideabehindalgorithm'></a>算法原理概览：(idea behind algorithm)
+
+同步讲解视频
+<iframe src="//player.bilibili.com/player.html?aid=465800864&bvid=BV13L411w7Ac&cid=487629650&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+
 <div align = center>
     <img src = './figure/猫狗.jpg' width = '50%'>
 </div>
@@ -285,9 +295,9 @@ def main():
 </div>
 
 
-### 模型结构：（model architecture）
+###  3.3. <a name='modelarchitecture'></a>模型结构：（model architecture）
 
-### 损失函数: (loss function)
+###  3.4. <a name=':lossfunction'></a>损失函数: (loss function)
 
 
 
