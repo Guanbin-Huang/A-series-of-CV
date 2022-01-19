@@ -19,12 +19,12 @@
 # A-series-of-CV
 <span style="color:red">**温馨提示**</span>
 - ⚡强烈建议⚡下载下来阅读，可以看到颜色更丰富的字体
-- 尽量以结构化思维来阅读，即尤其注意每一部分的开头和结尾小结，这将有助于你了解每一小段的主旨大意，使得你可以选择是否现在需要学习它以及要打算要学习到哪种程度。越缩进的越是细节,看不懂可暂时不看,更多用来作为补充
+- 尽量以结构化思维来阅读，即尤其注意每一部分的开头和结尾小结，这将有助于你了解每一小段的主旨大意，使得你可以选择是否现在需要学习它以及要打算要学习到哪种程度。越缩进的越是细节,看不懂可暂时不看或者跳过,更多用来作为补充
 - 一般地，ref都是我看过的，良心推荐，所以如果需要额外补充和更加详细的讲解，可以阅读ref。如果想跟我们在 reference 阅读上进行更多互动，或者更快速地把握阅读重点，推荐使用Hypothesis Google插件并且通过以下链接进入便可以看到这篇文章内我阅读时认为的重点和有意思的批注。论文不一定完全看完，但是一些插图和对符号的描述很有助于理解
     - https://hypothes.is/groups/DymmQBML/shouxieai
     - 通过该插件看到的颜色，你应该可以更好更快地阅读和理解
-<br>
-<br>
+    <br>
+    <br>
 
 
 
@@ -123,6 +123,173 @@ reference:<br>
 
 <span style='color:red'>**小结**</span> ：到目前为止，我们应当确保自己至少对以下这句话是理解的：
 目标检测其实就是一个回归问题，我们将predict输出的tensor上的值不断地去逼近gt上的真值。至于真值到底长什么样（即我们到底是如何具体地去 <span style='color:red'>**编码**</span> 目标(e.g.人头检测中的人头)的 ),我们稍后会谈到。
+
+<br><br>
+
+## 手写yolov1
+reference:
+- [1] source code https://github.com/aladdinpersson/Machine-Learning-Collection/tree/master/ML/Pytorch/object_detection/YOLO
+- [2] yolov1 from scratch https://www.youtube.com/watch?v=n9_XyCGr-MI&t=4532s
+
+
+### train.py
+
+概览工程目录
+<div align = center>
+    <img src = './figure/prj_structure.jpg' width = '20%'>
+    <h4>工程目录概览 </h4>
+</div>
+
+秉着先粗后细,先架框架，再补充细节的原则，我们先写 train.py
+train.py里面可以首先写个入口函数，然后将其放到train.py的最底下。
+
+```python
+if __name__ == "__main__":
+    main()
+```
+
+然后我们开始写
+```python
+import torch
+import torchvision.transforms as transforms
+import torch.optim as optim
+from tqdm import tqdm
+from torch.utils.data import DataLoader
+from model import Yolov1
+from dataset import VOCDataset
+from utils import (
+    non_max_suppression,
+    mean_average_precision,
+    IOU,
+    cellboxes_to_boxes,
+    get_bboxes,
+    plt_image,
+    save_checkpoint,
+    load_checkpoint
+)
+```
+- 我们需要 <span style='color:red'>**导入**</span>上面的这些东西(包括单不限于)
+    - （1）torch本身，优化器，tqdm（进度可视化）,Dataloader
+    - （2）一些自己要写的，比如说model,dataset, utils（常用的工具函数）。我们先假设他们已经被写好了，这也就是我们所谓的架框架。
+
+
+- 接着我们写一些我们可能需要用到的 <span style='color:red'>**超参**</span>
+
+```python
+LEARNING_RATE = 2e-5
+DEVICE = "cuda" if torch.cuda.is_available else "cpu"
+BATCH_SIZE = 16 # 64 in original paper but considering performance, use 16
+WEIGHT_DECAY = 0 # TODO
+EPOCHS = 1000
+NUM_WORKERS = 2  # TODO
+PIN_MEMORY = True
+LOAD_MODEL = False
+LOAD_MODEL_FILE = "overfit.pth.tar" # TODO
+IMG_DIR = "data/images"
+LABEL_DIR = "data/labels"
+```
+
+然后我们开始写 <span style='color:red'>**train的内外循环**</span>
+``` python
+def main():
+    # 暂时把model optimizer 和 loss 叫做 三件套
+    model = Yolov1(split_size = 7, num_boxes=2, num_classes=20).to(DEVICE)
+    optimizer = optim.Adam(
+        model.parameters(), lr=LEARNGING_RATE, weight_decay=WEIGHT_DECAY
+    )
+    loss_fn = YoloLoss()
+
+    if LOAD_MODEL: # 如果我使用预训练模型
+        load_checkpoint(torch.load(LOAD_MODEL_FILE), model)
+
+    # dataset 和 dataloader
+    train_dataset = VOCDataset(
+        "data/100examples.csv",
+        transform=transform,
+        img_dir=IMG_DIR,
+        label_dir=LABEL_DIR
+        )
+
+    test_dataset = VOCDataset(
+        "data/test.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
+    )
+    
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        pin_memory=PIN_MEMORY,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    test_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        pin_memory=PIN_MEMORY,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    # 开始外循环了（epoch 的循环）
+    for epoch in range(EPOCHS):
+        # 一上来首先做一轮map评价先
+        # 给定图片数据，模型，iou阈值和confidence阈值，最终得到返回框
+        pred_boxes, target_boxes = get_bboxes(
+            train_loader, model, iou_threshold=0.5, threshold=0.4
+        ) 
+
+        # 拿到prediction之后，我们用map去评价它们
+        mean_avg_prec = mean_average_precision(
+            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
+        )
+
+        print(f"Train mAP: {mean_avg_prec}")
+
+        train_fn(train_loader, model, optimzier, loss_fn)
+
+```
+- 到此为止，train.py 已经写完了
+- <span style='color:red'>**小结：**</span>
+    - 对于一个新的网络来说，无论对于理论还是代码，我们可以从以下几个方面去拆解它，这里以yolo为例子，接下来我们会按以下角度讨论它
+        - **概览形象**讨论：overview of yolo
+        - **代码细节**讨论：
+            - network architecture
+            - loss function
+            - Dataset
+            - 等其他的新特点
+                - 注意：讨论代码细节的时候代码和形象结合将更有注意理解
+
+### 算法原理概览：(idea behind algorithm)
+<div align = center>
+    <img src = './figure/猫狗.jpg' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119114738115.png' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119114809015.png' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119114833737.png' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119114853403.png' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119115000436.png' width = '50%'>
+</div>
+<div align = center>
+    <img src = './figure/image-20220119115021263.png' width = '50%'>
+</div>
+
+
+### 模型结构：（model architecture）
+
+### 损失函数: (loss function)
+
+
 
 
 
