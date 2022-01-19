@@ -295,6 +295,136 @@ def main():
 
 
 ###  3.3. <a name='modelarchitecture'></a>模型结构：（model architecture）
+先创建我们待会儿需要的文件
+```bash
+touch model.py loss.py train.py utils.py dataset.py
+```
+打开model.py，输入以下代码。
+- 下面的代码描述了我们的backbone是怎么让架起来的。
+    - 如果它是tuple，那么数字依次是（kernel_size, output_dim, stride, padding）
+    - M指的是maxpooling
+    - 如果是list
+        - 例如 [(1, 512, 1, 0), (3, 1024, 1, 1), 2]
+        - 那么最后的数字"2"代表的是(1, 512, 1, 0)和(3, 1024, 1, 1)这两个卷积要按顺序的重复**2**次
+    - <span style='color:green'>**Tips:**</span> 未来，我们会将这些网络结构配置放在一种叫做 <span style='color:red'>**温馨提示**</span> yaml的文件里
+
+```python
+architecture_config = [
+    (7, 64, 2, 3),
+    "M",
+    (3, 192, 1, 1),
+    "M",
+    (1, 128, 1, 0),
+    (3, 256, 1, 1),
+    (1, 256, 1, 0),
+    (3, 512, 1, 1),
+    "M",
+    [(1, 256, 1, 0), (3, 512, 1, 1), 4],
+    (1, 512, 1, 0),
+    (3, 1024, 1, 1),
+    "M",
+    [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
+    (3, 1024, 1, 1),
+    (3, 1024, 2, 1),
+    (3, 1024, 1, 1),
+    (3, 1024, 1, 1),
+]
+```
+
+值得注意的是，我们上面的一行（e.g.(7, 64, 2, 3) ）其实不是我们普通的conv，而是卷积加上一些其他的操作，比如说激活层
+- 在yolov5的展示图中，你也会看到类似的表示如下图
+    <div align = center>
+        <img src = './figure/非普通卷积.jpg' width = '30%'>
+        </div>
+
+- 在代码上的我们要写一个类来封装它
+```python
+class CNNBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, **kwargs):
+        super(CNNBlock, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs) # 因为下面需要用到BN，所以我们这里bias=False
+        self.batchnorm = nn.BatchNorm2d(out_channels)
+        self.leakyrelu = nn.LeakyReLU(0.1)
+
+    def forward(self, x):
+        return self.leakyrelu(self.batchnorm(self.conv(x)))
+```
+
+有了CNNblock也有了网络整个的架构architecture_config，我们便可以通过一个新的类来统筹这一切如下图
+```python
+class Yolov1(nn.Module):
+    def __init__(self, in_channels=3, **kwargs):
+        super(Yolov1, self).__init__()
+        self.architecture = architecture_config
+        self.in_channels = in_channels
+        self.darknet = self._create_conv_layers(self.architecture)
+        self.fcs = self._create_fcs(**kwargs) # fcs: fully connected layer
+
+    def forward(self, x):
+        x = self.darknet(x)
+        return self.fcs(torch.flatten(x, start_dim=1))
+
+    def _create_conv_layers(self, architecture):
+        layers = []
+        in_channels = self.in_channels
+
+        for x in architecture:
+            if type(x) == tuple:
+                layers += [
+                    CNNBlock(
+                        in_channels, x[1], kernel_size=x[0], stride=x[2], padding=x[3],
+                    )
+                ]
+                in_channels = x[1] 
+
+            elif type(x) == str:
+                layers += [nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))]
+
+            elif type(x) == list:
+                conv1 = x[0]
+                conv2 = x[1]
+                num_repeats = x[2]
+
+                for _ in range(num_repeats):
+                    layers += [
+                        CNNBlock(
+                            in_channels,
+                            conv1[1],
+                            kernel_size=conv1[0],
+                            stride=conv1[2],
+                            padding=conv1[3],
+                        )
+                    ]
+                    layers += [
+                        CNNBlock(
+                            conv1[1],
+                            conv2[1],
+                            kernel_size=conv2[0],
+                            stride=conv2[2],
+                            padding=conv2[3],
+                        )
+                    ]
+                    in_channels = conv2[1]
+
+        return nn.Sequential(*layers)
+
+    def _create_fcs(self, split_size, num_boxes, num_classes):
+        S, B, C = split_size, num_boxes, num_classes
+
+        # In original paper this should be
+        # nn.Linear(1024*S*S, 4096),
+        # nn.LeakyReLU(0.1),
+        # nn.Linear(4096, S*S*(B*5+C))
+
+        return nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(1024 * S * S, 496),
+            nn.Dropout(0.0),
+            nn.LeakyReLU(0.1),
+            nn.Linear(496, S * S * (C + B * 5)),
+        )
+```
+
 
 ###  3.4. <a name=':lossfunction'></a>损失函数: (loss function)
 
