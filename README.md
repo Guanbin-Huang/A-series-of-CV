@@ -269,7 +269,7 @@ def main():
 ###  3.2. <a name='ideabehindalgorithm'></a>算法原理概览：(idea behind algorithm)
 
 同步讲解视频
-- https://www.bilibili.com/video/BV13L411w7Ac?share_source=copy_web
+- https://www.bilibili.com/video/BV1PS4y1o7Lp?share_source=copy_web
 
 <div align = center>
     <img src = './figure/猫狗.jpg' width = '50%'>
