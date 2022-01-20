@@ -269,7 +269,7 @@ def main():
 ###  3.2. <a name='ideabehindalgorithm'></a>算法原理概览：(idea behind algorithm)
 
 同步讲解视频
-- https://www.bilibili.com/video/BV1PS4y1o7Lp?share_source=copy_web
+- https://www.bilibili.com/video/BV1PS4y1o7Lp?share_source=copy_web- 
 
 <div align = center>
     <img src = './figure/猫狗.jpg' width = '50%'>
@@ -368,14 +368,15 @@ class Yolov1(nn.Module):
         layers = []
         in_channels = self.in_channels
 
+        # 接下来就是按architecture的配置不断地往layer里面加层
         for x in architecture:
             if type(x) == tuple:
                 layers += [
                     CNNBlock(
                         in_channels, x[1], kernel_size=x[0], stride=x[2], padding=x[3],
                     )
-                ]
-                in_channels = x[1] 
+                ] # x[1]: 该ConvBlock层的一个输出维度
+                in_channels = x[1] # 下一层的新的输入dim就是上一层的输出dim
 
             elif type(x) == str:
                 layers += [nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))]
@@ -404,7 +405,7 @@ class Yolov1(nn.Module):
                             padding=conv2[3],
                         )
                     ]
-                    in_channels = conv2[1]
+                    in_channels = conv2[1] # 新的输入dim会是最后的conv的输出dim
 
         return nn.Sequential(*layers)
 
@@ -425,6 +426,14 @@ class Yolov1(nn.Module):
         )
 ```
 
+写完之后，遵循单元测试的原则，我们可以写一个测试函数来测试我们的网络shape结果是否和论文给出的是一样的。测试代码如下：
+```python
+def test(S=7, B=2, C=20): # 最后分成7x7个cell,每个cell 预测两个bbox，20个分类
+    model = Yolo1(split_size=S, num_boxes=B, num_classes=C)
+    x = torch.randn((2, 3, 448, 448))
+    print(model(x).shape)
+
+```
 
 ###  3.4. <a name=':lossfunction'></a>损失函数: (loss function)
 
